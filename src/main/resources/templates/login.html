@@ -1,0 +1,14 @@
+<html lang="en" xmlns:th="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="UTF-8" />
+    </head>
+    <body>
+    登陆
+    <form action="/login" method="post">
+        Username: <input name="aaa" /> <br />
+        Password: <input name="bbb" type="password" /><br />
+        Token: <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        Submit <input type="submit" value="登录" />
+    </form>
+    </body>
+</html>
