@@ -10,7 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
@@ -29,6 +29,24 @@ public class MyConfig extends WebSecurityConfigurerAdapter {
 	// 这个 Spring Security更多的适用于单机，不是分布式
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
+
+		final PasswordEncoder encoder = passwordEncoder();
+		final String pass1 = encoder.encode("123");
+		final String pass2 = encoder.encode("123");
+		final String pass3 = encoder.encode("123");
+
+		System.out.println("pass1: " + pass1);
+		System.out.println("pass2: " + pass2);
+		System.out.println("pass3: " + pass3);
+		/*
+			会打印：
+			pass1: $2a$10$T0P/Fwx.00PRNUqFVbZL5esM2/vllxPIU7Kx3BOH6uTB6nZBneV46
+			pass2: $2a$10$KjCO74QDqigRk4d5o0/MiuWSV6b1SE99CimNP274xwzwcnTvxBtqG
+			pass3: $2a$10$6BAWK/7TjRW8za1ElyiCoeIVNZm4bso9iBE7znRf2gXg3O5f.1i3i
+			2a是加密算法的版本号，10是重复加密的次数，盐是随机的被加在了$2a$10$之后，到哪结束不知道。
+			摘要，单向加密，只做判断不做解密
+		 */
+
 		http.authorizeRequests().anyRequest().authenticated() // 那些地址需要登录
 		.and()
 		.formLogin().loginPage("/login.html")  // 登陆表单，这里对应了LoginController里的@GetMapping("/login.html")
@@ -69,14 +87,15 @@ public class MyConfig extends WebSecurityConfigurerAdapter {
 	// 当并发量高的时候，换成JWT，整套解决方案换成无状态的，基于token的校验，这里的服务器不维持会话，客户端自己提交token上来
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		PasswordEncoder encoder = passwordEncoder();
 		auth
 				.inMemoryAuthentication()
 				.withUser("123")
-				.password("123")
+				.password(encoder.encode("123"))
 				.roles("admin") // 角色必填！！
 				.and()
 				.withUser("321")
-				.password("321")
+				.password(encoder.encode("321"))
 				.roles("user");
 	}
 
@@ -84,6 +103,6 @@ public class MyConfig extends WebSecurityConfigurerAdapter {
 	// https://mkyong.com/spring-boot/spring-security-there-is-no-passwordencoder-mapped-for-the-id-null/
 	@Bean
 	public PasswordEncoder passwordEncoder() {
-		return NoOpPasswordEncoder.getInstance();
+		return new BCryptPasswordEncoder();
 	}
 }
