@@ -1,13 +1,17 @@
 package com.lisz.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
@@ -20,24 +24,25 @@ import java.io.IOException;
 @EnableWebSecurity
 public class MyConfig extends WebSecurityConfigurerAdapter {
 	// 默认情况下，重写configure方法就已经开启了csrf验证，回去检查表单里有没有_csrf.token。不写
-	// 下面下发hash值，Controller下发到页面上，项目后端也要存这个哈希值
-	// configure方法就是提供给我们重新配置属性的
+	// 下面下发hash值，Controller下发到页面上，项目后端也要存这个哈希值。这个Hash值不能放在cookie里，否则就会被偷到
+	// configure方法就是提供给我们重新配置属性的。
+	// 这个 Spring Security更多的适用于单机，不是分布式
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http.authorizeRequests().anyRequest().authenticated()
+		http.authorizeRequests().anyRequest().authenticated() // 那些地址需要登录
 		.and()
-		.formLogin().loginPage("/login.html")  // 登陆表单
+		.formLogin().loginPage("/login.html")  // 登陆表单，这里对应了LoginController里的@GetMapping("/login.html")
 				.loginProcessingUrl("/login")
 				.permitAll()
-				.failureForwardUrl("/error.html")
-				.defaultSuccessUrl("/login_success.html", true)
+				.failureForwardUrl("/error.html") // 登陆失败页面
+				.defaultSuccessUrl("/login_success.html", false) // 登陆成功页面, true的时候：只要登陆成功，都会给用户显示欢迎页；false（默认）的时候：如果用户在访问某个页面或资源的时候被要求登录，则登陆成功后，返回他刚刚试图访问的那个资源。这个设置不能根据权限展示页面
 				.usernameParameter("aaa") // Spring Security会拿着 aaa去寻找html中name="aaa"的那个input，将其value作为username
 				.passwordParameter("bbb") // Spring Security会拿着 bbb去寻找html中name="bbb"的那个input，将其value作为password, 并校验能否分别对上yml中设置的spring.security.user.name和spring.security.user.password
-				.failureHandler(new AuthenticationFailureHandler() {
+				.failureHandler(new AuthenticationFailureHandler() { // 可以用 .failureUrl("/error.html") 但是登录失败的原因是带不过去的，所以有时候需要这么个handler
 					@Override
 					public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
 						exception.printStackTrace();
-						//登录的时候账号或密码出错，则会抛出BadCredentialsException，可以用instanceof判断各种情况作出处理
+						//登录的时候账号或密码出错，则会抛出BadCredentialsException，可以用instanceof判断各种情况作出处理，如各种错误情况下的处理、登录次数统计
 						if (exception instanceof CredentialsExpiredException ||
 								exception instanceof LockedException ||
 								exception instanceof BadCredentialsException) {
@@ -57,6 +62,28 @@ public class MyConfig extends WebSecurityConfigurerAdapter {
 				.and() // and就退回父标签了
 				.csrf().csrfTokenRepository(new HttpSessionCsrfTokenRepository());
 //				.and()
+	}
 
+	// 重写完这里的账号密码配置之后,yml里的配置就被覆盖了
+	// Session登录，无必要网Redis里面写，这要是写，那就说明登录用户已经非常多了，此时不应该用基于会话的形式保证用户的登录状态了。
+	// 当并发量高的时候，换成JWT，整套解决方案换成无状态的，基于token的校验，这里的服务器不维持会话，客户端自己提交token上来
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth
+				.inMemoryAuthentication()
+				.withUser("123")
+				.password("123")
+				.roles("admin") // 角色必填！！
+				.and()
+				.withUser("321")
+				.password("321")
+				.roles("user");
+	}
+
+	// 上面👆的用户名和密码都是明文，密码最好加密：
+	// https://mkyong.com/spring-boot/spring-security-there-is-no-passwordencoder-mapped-for-the-id-null/
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return NoOpPasswordEncoder.getInstance();
 	}
 }
