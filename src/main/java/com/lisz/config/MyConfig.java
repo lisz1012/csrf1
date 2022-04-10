@@ -44,7 +44,7 @@ public class MyConfig extends WebSecurityConfigurerAdapter {
 			pass2: $2a$10$KjCO74QDqigRk4d5o0/MiuWSV6b1SE99CimNP274xwzwcnTvxBtqG
 			pass3: $2a$10$6BAWK/7TjRW8za1ElyiCoeIVNZm4bso9iBE7znRf2gXg3O5f.1i3i
 			2a是加密算法的版本号，10是重复加密的次数，盐是随机的被加在了$2a$10$之后，到哪结束不知道。
-			摘要，单向加密，只做判断不做解密
+			摘要，单向加密，只做判断不做解密, 用来校验和权限相关的东西，而不是加密真正的信息
 		 */
 
 		http.authorizeRequests().anyRequest().authenticated() // 那些地址需要登录
