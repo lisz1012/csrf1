@@ -25,7 +25,7 @@ import java.io.IOException;
 public class MyConfig extends WebSecurityConfigurerAdapter {
 	// 默认情况下，重写configure方法就已经开启了csrf验证，回去检查表单里有没有_csrf.token。不写
 	// 下面下发hash值，Controller下发到页面上，项目后端也要存这个哈希值。客户端提交的时候要带回这个哈希值
-	// 这个Hash值不能放在cookie里，否则就会被偷到
+	// 这个Hash值不能放在cookie里，否则就会被偷到。
 	// configure方法就是提供给我们重新配置属性的。
 	// 这个 Spring Security更多的适用于单机，不是分布式。
 	@Override
